@@ -29,9 +29,9 @@ model Session {
 }
 
 model Discount {
-  id                String  @id @default(uuid())
-  shop              String  @unique
-  shopifyDiscountId String  @unique
+  id                String @id @default(uuid())
+  shop              String
+  shopifyDiscountId String @unique
 
   name        String
   description String
