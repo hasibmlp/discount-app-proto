@@ -5,11 +5,17 @@ import {
   UPDATE_CODE_DISCOUNT,
   UPDATE_AUTOMATIC_DISCOUNT,
   GET_DISCOUNT,
+  DELETE_CODE_DISCOUNT,
+  DELETE_AUTOMATIC_DISCOUNT,
+  DISCOUNT_AUTOMATIC_BULK_ACTIVATE,
+  DISCOUNT_CODE_BULK_ACTIVATE,
+  DISCOUNT_AUTOMATIC_BULK_DEACTIVATE,
+  DISCOUNT_CODE_BULK_DEACTIVATE,
 } from "../graphql/discounts";
 import { authenticate } from "../shopify.server";
-import type { DiscountClass, Discount as ShopifyDiscount } from "../types/admin.types";
+import type { DiscountClass } from "../types/admin.types";
 import { DiscountMethod } from "../types/types";
-import { DiscountType, Discount } from "@prisma/client";
+import { DiscountType, Discount, CombinesWith } from "@prisma/client";
 
 interface BaseDiscount {
   functionId?: string;
@@ -37,13 +43,18 @@ interface UserError {
   field?: string[];
 }
 
+interface DeleteDiscountResult {
+  success: boolean;
+  error?: string;
+}
+
 export async function createCodeDiscount(
   request: Request,
   baseDiscount: BaseDiscount,
   code: string,
   usageLimit: number | null,
   appliesOncePerCustomer: boolean,
-  configuration: DiscountConfiguration,
+  configuration: DiscountConfiguration
 ) {
   const { admin, session } = await authenticate.admin(request);
   const shopDomain = session.shop;
@@ -73,9 +84,24 @@ export async function createCodeDiscount(
   });
 
   const responseJson = await response.json();
-  const shopifyUserErrors = responseJson.data.discountCreate?.userErrors as UserError[];
+  const shopifyUserErrors = responseJson.data.discountCreate
+    ?.userErrors as UserError[];
 
   console.log(responseJson.data.discountCreate);
+
+  if (shopifyUserErrors.length > 0) {
+    return {
+      errors: shopifyUserErrors,
+      discount: null,
+    };
+  }
+
+  if (!responseJson.data.discountCreate.codeAppDiscount) {
+    return {
+      errors: shopifyUserErrors,
+      discount: null,
+    };
+  }
 
   const {
     discountId: shopifyDiscountId,
@@ -89,18 +115,21 @@ export async function createCodeDiscount(
     discountClasses: shopifyDiscountDiscountClasses,
   } = responseJson.data.discountCreate.codeAppDiscount;
 
-  if(shopifyUserErrors.length > 0) {
+  if (
+    !shopifyDiscountId ||
+    !shopifyDiscountCodes ||
+    !shopifyDiscountStartsAt ||
+    !shopifyDiscountDiscountClasses
+  ) {
     return {
-      errors: shopifyUserErrors,
+      errors: [
+        ...(shopifyUserErrors || []),
+        {
+          field: ["shopify"],
+          message: "Failed to create discount on Shopify or retrieve its ID.",
+        },
+      ] as UserError[],
       discount: null,
-    }
-  }
-
-  if (!shopifyDiscountTitle || !shopifyDiscountCodes || !shopifyDiscountCombinesWith || !shopifyDiscountUsageLimit || !shopifyDiscountAppliesOncePerCustomer || !shopifyDiscountStartsAt || !shopifyDiscountEndsAt || !shopifyDiscountDiscountClasses) {
-    return {
-      errors: [{ message: "Failed to create discount on Shopify or retrieve its ID." }] as UserError[],
-      discount: null,
-      shopifyDiscount: null,
     };
   }
 
@@ -111,7 +140,7 @@ export async function createCodeDiscount(
         shop: shopDomain,
         shopifyDiscountId: shopifyDiscountId,
         name: shopifyDiscountTitle,
-        description: 'sample description',
+        description: "sample description",
         code: code,
         discountMethod: DiscountMethod.Code,
         discountType: DiscountType.PERCENTAGE,
@@ -120,15 +149,40 @@ export async function createCodeDiscount(
         limitPerCustomer: shopifyDiscountAppliesOncePerCustomer ? 1 : null,
         startsAt: shopifyDiscountStartsAt,
         endsAt: shopifyDiscountEndsAt,
-        status: determineDiscountStatus(shopifyDiscountStartsAt, shopifyDiscountEndsAt),
+        status: determineDiscountStatus(
+          shopifyDiscountStartsAt,
+          shopifyDiscountEndsAt
+        ),
+        combinesWith: shopifyDiscountCombinesWith.orderDiscounts
+          ? CombinesWith.ORDER_DISCOUNT
+          : shopifyDiscountCombinesWith.productDiscounts
+            ? CombinesWith.PRODUCT_DISCOUNT
+            : shopifyDiscountCombinesWith.shippingDiscounts
+              ? CombinesWith.SHIPPING_DISCOUNT
+              : CombinesWith.ALL,
       },
     });
+
+    if (!discountRecord) {
+      return {
+        errors: [
+          {
+            field: ["database"],
+            message: "Failed to save discount to local database",
+          },
+        ],
+        discount: null,
+      };
+    }
   } catch (error: any) {
     console.error(error);
     return {
       errors: [
         ...(shopifyUserErrors || []),
-        { field: ["database"], message: `Failed to save discount to local database: ${error.message}` }
+        {
+          field: ["database"],
+          message: `Failed to save discount to local database: ${error.message}`,
+        },
       ] as UserError[],
       discount: null,
     };
@@ -143,7 +197,7 @@ export async function createCodeDiscount(
 export async function createAutomaticDiscount(
   request: Request,
   baseDiscount: BaseDiscount,
-  configuration: DiscountConfiguration,
+  configuration: DiscountConfiguration
 ) {
   const { admin } = await authenticate.admin(request);
   const response = await admin.graphql(CREATE_AUTOMATIC_DISCOUNT, {
@@ -187,7 +241,7 @@ export async function updateCodeDiscount(
     orderPercentage: number;
     deliveryPercentage: number;
     collectionIds?: string[];
-  },
+  }
 ) {
   const { admin } = await authenticate.admin(request);
   const discountId = id.includes("gid://")
@@ -212,7 +266,7 @@ export async function updateCodeDiscount(
               deliveryPercentage: configuration.deliveryPercentage,
               collectionIds:
                 configuration.collectionIds?.map((id) =>
-                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`,
+                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`
                 ) || [],
             }),
           },
@@ -237,7 +291,7 @@ export async function updateAutomaticDiscount(
     orderPercentage: number;
     deliveryPercentage: number;
     collectionIds?: string[];
-  },
+  }
 ) {
   const { admin } = await authenticate.admin(request);
   const discountId = id.includes("gid://")
@@ -258,7 +312,7 @@ export async function updateAutomaticDiscount(
               deliveryPercentage: configuration.deliveryPercentage,
               collectionIds:
                 configuration.collectionIds?.map((id) =>
-                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`,
+                  id.includes("gid://") ? id : `gid://shopify/Collection/${id}`
                 ) || [],
             }),
           },
@@ -305,7 +359,7 @@ export async function getDiscount(request: Request, id: string) {
     discountClasses,
   } = responseJson.data.discountNode.discount;
   const configuration = JSON.parse(
-    responseJson.data.discountNode.configurationField.value,
+    responseJson.data.discountNode.configurationField.value
   );
 
   return {
@@ -348,4 +402,231 @@ export async function getDiscountsFromDB() {
     used: discount.usedCount,
     description: discount.description,
   }));
+}
+
+export async function deleteDiscountDB(id: string) {
+  await prisma.discount.delete({
+    where: {
+      shopifyDiscountId: id,
+    },
+  });
+  return {
+    success: true,
+  };
+}
+
+async function deleteShopifyDiscounts(
+  admin: any,
+  codeDiscountIds: string[],
+  automaticDiscountIds: string[]
+): Promise<DeleteDiscountResult> {
+  try {
+    if (codeDiscountIds.length > 0) {
+      const codeResponse = await admin.graphql(DELETE_CODE_DISCOUNT, {
+        variables: { ids: codeDiscountIds },
+      });
+      const codeResult = await codeResponse.json();
+      if (codeResult.data.discountCodeBulkDelete.userErrors.length > 0) {
+        throw new Error("Failed to delete code discounts from Shopify");
+      }
+    }
+
+    if (automaticDiscountIds.length > 0) {
+      const autoResponse = await admin.graphql(DELETE_AUTOMATIC_DISCOUNT, {
+        variables: { ids: automaticDiscountIds },
+      });
+      const autoResult = await autoResponse.json();
+      if (autoResult.data.discountAutomaticBulkDelete.userErrors.length > 0) {
+        throw new Error("Failed to delete automatic discounts from Shopify");
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting Shopify discounts:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to delete discounts from Shopify",
+    };
+  }
+}
+
+export async function deleteDiscountBulk(
+  request: Request,
+  shopifyIds: string[]
+): Promise<DeleteDiscountResult> {
+  if (!shopifyIds.length) {
+    return {
+      success: false,
+      error: "No discounts selected for deletion",
+    };
+  }
+
+  const { admin } = await authenticate.admin(request);
+
+  // Separate discounts by type
+  const codeDiscountIds = shopifyIds.filter((id) =>
+    id.includes("DiscountCodeNode")
+  );
+  const automaticDiscountIds = shopifyIds.filter((id) =>
+    id.includes("DiscountAutomaticApp")
+  );
+
+  if (!codeDiscountIds.length && !automaticDiscountIds.length) {
+    return {
+      success: false,
+      error: "Invalid discount IDs provided",
+    };
+  }
+
+  try {
+    const shopifyResult = await deleteShopifyDiscounts(
+      admin,
+      codeDiscountIds,
+      automaticDiscountIds
+    );
+    if (!shopifyResult.success) {
+      return shopifyResult;
+    }
+
+    await prisma.discount.deleteMany({
+      where: {
+        shopifyDiscountId: {
+          in: shopifyIds,
+        },
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error in deleteDiscountBulk:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to delete discounts",
+    };
+  }
+}
+
+async function updateShopifyDiscountStatus(
+  admin: any,
+  codeDiscountIds: string[],
+  automaticDiscountIds: string[],
+  action: "activate" | "deactivate"
+): Promise<DeleteDiscountResult> {
+  try {
+    if (codeDiscountIds.length > 0) {
+      const mutation =
+        action === "activate"
+          ? DISCOUNT_CODE_BULK_ACTIVATE
+          : DISCOUNT_CODE_BULK_DEACTIVATE;
+      const codeResponse = await admin.graphql(mutation, {
+        variables: { ids: codeDiscountIds },
+      });
+      const codeResult = await codeResponse.json();
+      if (
+        codeResult.data[
+          `discountCodeBulk${action === "activate" ? "Activate" : "Deactivate"}`
+        ].userErrors.length > 0
+      ) {
+        throw new Error(`Failed to ${action} code discounts in Shopify`);
+      }
+    }
+
+    if (automaticDiscountIds.length > 0) {
+      const mutation =
+        action === "activate"
+          ? DISCOUNT_AUTOMATIC_BULK_ACTIVATE
+          : DISCOUNT_AUTOMATIC_BULK_DEACTIVATE;
+      const autoResponse = await admin.graphql(mutation, {
+        variables: { ids: automaticDiscountIds },
+      });
+      const autoResult = await autoResponse.json();
+      if (
+        autoResult.data[
+          `discountAutomaticBulk${action === "activate" ? "Activate" : "Deactivate"}`
+        ].userErrors.length > 0
+      ) {
+        throw new Error(`Failed to ${action} automatic discounts in Shopify`);
+      }
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Error ${action}ing Shopify discounts:`, error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : `Failed to ${action} discounts in Shopify`,
+    };
+  }
+}
+
+export async function updateDiscountStatusBulk(
+  request: Request,
+  shopifyIds: string[],
+  action: "activate" | "deactivate"
+): Promise<DeleteDiscountResult> {
+  if (!shopifyIds.length) {
+    return {
+      success: false,
+      error: `No discounts selected for ${action}ion`,
+    };
+  }
+
+  const { admin } = await authenticate.admin(request);
+
+  const codeDiscountIds = shopifyIds.filter((id) =>
+    id.includes("DiscountCodeNode")
+  );
+  const automaticDiscountIds = shopifyIds.filter((id) =>
+    id.includes("DiscountAutomaticApp")
+  );
+
+  if (!codeDiscountIds.length && !automaticDiscountIds.length) {
+    return {
+      success: false,
+      error: "Invalid discount IDs provided",
+    };
+  }
+
+  try {
+    const shopifyResult = await updateShopifyDiscountStatus(
+      admin,
+      codeDiscountIds,
+      automaticDiscountIds,
+      action
+    );
+    if (!shopifyResult.success) {
+      return shopifyResult;
+    }
+
+    // Update local database
+    await prisma.discount.updateMany({
+      where: {
+        shopifyDiscountId: {
+          in: shopifyIds,
+        },
+      },
+      data: {
+        status: action === "activate" ? "ACTIVE" : "DEACTIVATED",
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error(`Error in updateDiscountStatusBulk:`, error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : `Failed to ${action} discounts`,
+    };
+  }
 }

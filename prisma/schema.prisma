@@ -45,6 +45,8 @@ model Discount {
   usedCount        Int  @default(0)
   limitPerCustomer Int?
 
+  combinesWith CombinesWith @default(ALL)
+
   startsAt DateTime
   endsAt   DateTime?
 
@@ -70,4 +72,11 @@ enum DiscountStatus {
   SCHEDULED
   EXPIRED
   DEACTIVATED
+}
+
+enum CombinesWith {
+  ALL
+  ORDER_DISCOUNT
+  PRODUCT_DISCOUNT
+  SHIPPING_DISCOUNT
 }

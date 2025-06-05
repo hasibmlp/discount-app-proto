@@ -124,3 +124,93 @@ export const CREATE_AUTOMATIC_DISCOUNT = `
     }
   }
 `;
+
+export const DELETE_AUTOMATIC_DISCOUNT = `
+  mutation DeleteAutomaticDiscount($ids: [ID!]!) {
+    discountAutomaticBulkDelete(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+export const DELETE_CODE_DISCOUNT = `
+  mutation DeleteCodeDiscount($ids: [ID!]!) {
+    discountCodeBulkDelete(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+export const DISCOUNT_AUTOMATIC_BULK_ACTIVATE = `
+  mutation discountAutomaticBulkActivate($ids: [ID!]!) {
+    discountAutomaticBulkActivate(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+export const DISCOUNT_CODE_BULK_ACTIVATE = `
+  mutation discountCodeBulkActivate($ids: [ID!]!) {
+    discountCodeBulkActivate(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+export const DISCOUNT_AUTOMATIC_BULK_DEACTIVATE = `
+  mutation discountAutomaticBulkDeactivate($ids: [ID!]!) {
+    discountAutomaticBulkDeactivate(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
+
+export const DISCOUNT_CODE_BULK_DEACTIVATE = `
+  mutation discountCodeBulkDeactivate($ids: [ID!]!) {
+    discountCodeBulkDeactivate(ids: $ids) {
+      job {
+        id
+      }
+      userErrors {
+        code
+        field
+        message
+      }
+    }
+  }
+`;
