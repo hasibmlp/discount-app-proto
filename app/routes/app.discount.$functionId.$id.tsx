@@ -1,5 +1,5 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigate, useNavigation } from "@remix-run/react";
 import { Page } from "@shopify/polaris";
 import { Collection, DiscountClass } from "app/types/admin.types";
 
@@ -12,7 +12,6 @@ import {
   updateCodeDiscount,
 } from "../models/discounts.server";
 import { DiscountMethod } from "../types/types";
-import { returnToDiscounts } from "../utils/navigation";
 
 interface ActionData {
   errors?: {
@@ -139,6 +138,7 @@ export default function VolumeEdit() {
   const actionData = useActionData<ActionData>();
   const { discount: rawDiscount, collections } = useLoaderData<LoaderData>();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const isLoading = navigation.state === "submitting";
   const submitErrors =
     actionData?.errors?.map((error) => ({
@@ -177,7 +177,7 @@ export default function VolumeEdit() {
   return (
     <Page>
       <ui-title-bar title={`Edit ${rawDiscount.title}`}>
-        <button variant="breadcrumb" onClick={returnToDiscounts}>
+        <button variant="breadcrumb" onClick={() => navigate("/app")}>
           Discounts
         </button>
       </ui-title-bar>

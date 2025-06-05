@@ -33,17 +33,16 @@ model Discount {
   shop              String
   shopifyDiscountId String @unique
 
-  name        String
-  description String
-  code        String
-
-  discountMethod DiscountMethod
-  discountType   DiscountType
-  value          Float
-
+  name             String
+  description      String
+  code             String
+  discountClasses  DiscountClass[]
+  discountMethod   DiscountMethod
+  discountType     DiscountType
   usageLimit       Int?
-  usedCount        Int  @default(0)
+  usedCount        Int             @default(0)
   limitPerCustomer Int?
+  configuration    Json?
 
   combinesWith CombinesWith @default(ALL)
 
@@ -79,4 +78,10 @@ enum CombinesWith {
   ORDER_DISCOUNT
   PRODUCT_DISCOUNT
   SHIPPING_DISCOUNT
+}
+
+enum DiscountClass {
+  ORDER
+  PRODUCT
+  SHIPPING
 }

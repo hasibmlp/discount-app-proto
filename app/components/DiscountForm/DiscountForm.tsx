@@ -511,7 +511,7 @@ export function DiscountForm({
               secondaryActions={[
                 {
                   content: "Discard",
-                  onAction: returnToDiscounts,
+                  url: "/app",
                 },
               ]}
             />

@@ -1,5 +1,5 @@
 import { ActionFunctionArgs } from "@remix-run/node";
-import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { useActionData, useLoaderData, useNavigation, useNavigate } from "@remix-run/react";
 import { Page } from "@shopify/polaris";
 
 import { DiscountForm } from "../components/DiscountForm/DiscountForm";
@@ -9,6 +9,7 @@ import {
 } from "../models/discounts.server";
 import { DiscountMethod } from "../types/types";
 import { returnToDiscounts } from "../utils/navigation";
+import { authenticate } from "~/shopify.server";
 
 export const loader = async () => {
   // Initially load with empty collections since none are selected yet
@@ -17,6 +18,7 @@ export const loader = async () => {
 
 // [START build-the-ui.add-action]
 export const action = async ({ params, request }: ActionFunctionArgs) => {
+  const { redirect } = await authenticate.admin(request);
   const { functionId } = params;
   const formData = await request.formData();
   const discountData = formData.get("discount");
@@ -73,7 +75,8 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
   if (result.errors?.length > 0) {
     return { errors: result.errors };
   }
-  return { success: true };
+
+  return redirect("/app");
 };
 // [END build-the-ui.add-action]
 
@@ -94,12 +97,9 @@ export default function VolumeNew() {
   const actionData = useActionData<ActionData>();
   const { collections } = useLoaderData<LoaderData>();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const isLoading = navigation.state === "submitting";
   const submitErrors = actionData?.errors || [];
-
-  if (actionData?.success) {
-    returnToDiscounts();
-  }
 
   const initialData = {
     title: "",
@@ -126,7 +126,7 @@ export default function VolumeNew() {
   return (
     <Page>
       <ui-title-bar title="Create product, order, and shipping discount">
-        <button variant="breadcrumb" onClick={returnToDiscounts}>
+        <button variant="breadcrumb" onClick={() => navigate("/app")}>
           Discounts
         </button>
       </ui-title-bar>

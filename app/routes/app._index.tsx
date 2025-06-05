@@ -16,10 +16,11 @@ import { json, redirect } from "@remix-run/node";
 import { getFunctions } from "../models/functions.server";
 import { DeleteIcon } from "@shopify/polaris-icons";
 import {
-  getDiscountsFromDB,
+  getDiscounts,
   deleteDiscountBulk,
   updateDiscountStatusBulk,
 } from "../models/discounts.server";
+import { getDiscountDescription } from "~/utils/discount";
 const resourceName = {
   singular: "discount",
   plural: "discounts",
@@ -27,7 +28,7 @@ const resourceName = {
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const functions = await getFunctions(request);
-  const discounts = await getDiscountsFromDB();
+  const discounts = await getDiscounts();
   return { functions, discounts };
 };
 
@@ -35,9 +36,9 @@ export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const action = formData.get("action") as string;
   const shopifyIds = formData.getAll("ids") as string[];
-  
+
   let result;
-  
+
   switch (action) {
     case "delete":
       result = await deleteDiscountBulk(request, shopifyIds);
@@ -46,16 +47,20 @@ export async function action({ request }: ActionFunctionArgs) {
       result = await updateDiscountStatusBulk(request, shopifyIds, "activate");
       break;
     case "deactivate":
-      result = await updateDiscountStatusBulk(request, shopifyIds, "deactivate");
+      result = await updateDiscountStatusBulk(
+        request,
+        shopifyIds,
+        "deactivate"
+      );
       break;
     default:
       return json({ error: "Invalid action" }, { status: 400 });
   }
-  
+
   if (!result.success) {
     return json({ error: result.error }, { status: 400 });
   }
-  
+
   return redirect("/app");
 }
 
@@ -71,7 +76,7 @@ export default function Index() {
   const handleBulkAction = (action: string) => {
     const formData = new FormData();
     formData.append("action", action);
-    
+
     const selectedDiscounts = discounts.filter((discount) =>
       selectedResources.includes(discount.id)
     );
@@ -121,6 +126,10 @@ export default function Index() {
         status,
         used,
         description,
+        usageLimit,
+        startsAt,
+        endsAt,
+        configuration,
       },
       index
     ) => (
@@ -142,13 +151,20 @@ export default function Index() {
                 {method === "CODE" ? code?.toUpperCase() : title}
               </Text>
               <Text as="span" variant="bodyMd">
-                {description}
+                {getDiscountDescription({
+                  type,
+                  code,
+                  method,
+                  usageLimit,
+                  description,
+                  configuration,
+                })}
               </Text>
             </BlockStack>
           </Link>
         </IndexTable.Cell>
         <IndexTable.Cell>
-          <Badge tone={status === "ACTIVE" ? "success" : 'enabled'}>
+          <Badge tone={status === "ACTIVE" ? "success" : "enabled"}>
             {status}
           </Badge>
         </IndexTable.Cell>

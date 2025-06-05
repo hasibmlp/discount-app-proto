@@ -113,6 +113,7 @@ export async function createCodeDiscount(
     startsAt: shopifyDiscountStartsAt,
     endsAt: shopifyDiscountEndsAt,
     discountClasses: shopifyDiscountDiscountClasses,
+    metafields: shopifyDiscountMetafields,
   } = responseJson.data.discountCreate.codeAppDiscount;
 
   if (
@@ -144,7 +145,6 @@ export async function createCodeDiscount(
         code: code,
         discountMethod: DiscountMethod.Code,
         discountType: DiscountType.PERCENTAGE,
-        value: 10,
         usageLimit: shopifyDiscountUsageLimit,
         limitPerCustomer: shopifyDiscountAppliesOncePerCustomer ? 1 : null,
         startsAt: shopifyDiscountStartsAt,
@@ -160,6 +160,7 @@ export async function createCodeDiscount(
             : shopifyDiscountCombinesWith.shippingDiscounts
               ? CombinesWith.SHIPPING_DISCOUNT
               : CombinesWith.ALL,
+        configuration: shopifyDiscountMetafields[0].value,
       },
     });
 
@@ -199,7 +200,8 @@ export async function createAutomaticDiscount(
   baseDiscount: BaseDiscount,
   configuration: DiscountConfiguration
 ) {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
   const response = await admin.graphql(CREATE_AUTOMATIC_DISCOUNT, {
     variables: {
       discount: {
@@ -222,9 +224,94 @@ export async function createAutomaticDiscount(
   });
 
   const responseJson = await response.json();
+  const shopifyUserErrors = responseJson.data.discountCreate
+    ?.userErrors as UserError[];
+
+  if (shopifyUserErrors.length > 0) {
+    return {
+      errors: shopifyUserErrors,
+      discount: null,
+    };
+  }
+
+  const shopifyDiscount = responseJson.data.discountCreate.automaticAppDiscount;
+  if (!shopifyDiscount || !shopifyDiscount.discountId) {
+    return {
+      errors: [
+        ...(shopifyUserErrors || []),
+        {
+          field: ["shopify"],
+          message:
+            "Failed to create automatic discount on Shopify or retrieve its ID.",
+        },
+      ] as UserError[],
+      discount: null,
+    };
+  }
+
+  let discountRecord: Discount | null = null;
+  try {
+    discountRecord = await prisma.discount.create({
+      data: {
+        shop: shopDomain,
+        shopifyDiscountId: shopifyDiscount.discountId,
+        name: baseDiscount.title,
+        description: "sample description",
+        code: "",
+        discountMethod: DiscountMethod.Automatic,
+        discountType: DiscountType.PERCENTAGE,
+        usageLimit: null,
+        limitPerCustomer: null,
+        startsAt: baseDiscount.startsAt,
+        endsAt: baseDiscount.endsAt,
+        status: determineDiscountStatus(
+          baseDiscount.startsAt,
+          baseDiscount.endsAt
+        ),
+        combinesWith: baseDiscount.combinesWith.orderDiscounts
+          ? CombinesWith.ORDER_DISCOUNT
+          : baseDiscount.combinesWith.productDiscounts
+            ? CombinesWith.PRODUCT_DISCOUNT
+            : baseDiscount.combinesWith.shippingDiscounts
+              ? CombinesWith.SHIPPING_DISCOUNT
+              : CombinesWith.ALL,
+        configuration: JSON.stringify({
+          cartLinePercentage: configuration.cartLinePercentage,
+          orderPercentage: configuration.orderPercentage,
+          deliveryPercentage: configuration.deliveryPercentage,
+          collectionIds: configuration.collectionIds || [],
+        }),
+      },
+    });
+
+    if (!discountRecord) {
+      return {
+        errors: [
+          {
+            field: ["database"],
+            message: "Failed to save automatic discount to local database",
+          },
+        ],
+        discount: null,
+      };
+    }
+  } catch (error: any) {
+    console.error(error);
+    return {
+      errors: [
+        ...(shopifyUserErrors || []),
+        {
+          field: ["database"],
+          message: `Failed to save automatic discount to local database: ${error.message}`,
+        },
+      ] as UserError[],
+      discount: null,
+    };
+  }
 
   return {
-    errors: responseJson.data.discountCreate?.userErrors as UserError[],
+    errors: [],
+    discount: discountRecord,
   };
 }
 
@@ -276,9 +363,64 @@ export async function updateCodeDiscount(
   });
 
   const responseJson = await response.json();
-  return {
-    errors: responseJson.data.discountUpdate?.userErrors as UserError[],
-  };
+  const shopifyUserErrors = responseJson.data.discountUpdate
+    ?.userErrors as UserError[];
+
+  if (shopifyUserErrors.length > 0) {
+    return { errors: shopifyUserErrors };
+  }
+
+  try {
+    // Update local database
+    await prisma.discount.update({
+      where: {
+        shopifyDiscountId: discountId,
+      },
+      data: {
+        name: code,
+        description: baseDiscount.title,
+        code: code,
+        discountMethod: DiscountMethod.Code,
+        discountType: DiscountType.PERCENTAGE,
+        usageLimit: usageLimit,
+        limitPerCustomer: appliesOncePerCustomer ? 1 : null,
+        startsAt: baseDiscount.startsAt,
+        endsAt: baseDiscount.endsAt,
+        status: determineDiscountStatus(
+          baseDiscount.startsAt,
+          baseDiscount.endsAt
+        ),
+        combinesWith: baseDiscount.combinesWith.orderDiscounts
+          ? CombinesWith.ORDER_DISCOUNT
+          : baseDiscount.combinesWith.productDiscounts
+            ? CombinesWith.PRODUCT_DISCOUNT
+            : baseDiscount.combinesWith.shippingDiscounts
+              ? CombinesWith.SHIPPING_DISCOUNT
+              : CombinesWith.ALL,
+        configuration: JSON.stringify({
+          cartLinePercentage: configuration.cartLinePercentage,
+          orderPercentage: configuration.orderPercentage,
+          deliveryPercentage: configuration.deliveryPercentage,
+          collectionIds: configuration.collectionIds || [],
+        }),
+      },
+    });
+
+    return { errors: [] };
+  } catch (error) {
+    console.error("Error updating discount in database:", error);
+    return {
+      errors: [
+        {
+          field: ["database"],
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update discount in database",
+        },
+      ],
+    };
+  }
 }
 
 export async function updateAutomaticDiscount(
@@ -322,9 +464,61 @@ export async function updateAutomaticDiscount(
   });
 
   const responseJson = await response.json();
-  return {
-    errors: responseJson.data.discountUpdate?.userErrors as UserError[],
-  };
+  const shopifyUserErrors = responseJson.data.discountUpdate
+    ?.userErrors as UserError[];
+
+  if (shopifyUserErrors.length > 0) {
+    return { errors: shopifyUserErrors };
+  }
+
+  try {
+    // Update local database
+    await prisma.discount.update({
+      where: {
+        shopifyDiscountId: discountId,
+      },
+      data: {
+        name: baseDiscount.title,
+        description: baseDiscount.title,
+        discountMethod: DiscountMethod.Automatic,
+        discountType: DiscountType.PERCENTAGE,
+        startsAt: baseDiscount.startsAt,
+        endsAt: baseDiscount.endsAt,
+        status: determineDiscountStatus(
+          baseDiscount.startsAt,
+          baseDiscount.endsAt
+        ),
+        combinesWith: baseDiscount.combinesWith.orderDiscounts
+          ? CombinesWith.ORDER_DISCOUNT
+          : baseDiscount.combinesWith.productDiscounts
+            ? CombinesWith.PRODUCT_DISCOUNT
+            : baseDiscount.combinesWith.shippingDiscounts
+              ? CombinesWith.SHIPPING_DISCOUNT
+              : CombinesWith.ALL,
+        configuration: JSON.stringify({
+          cartLinePercentage: configuration.cartLinePercentage,
+          orderPercentage: configuration.orderPercentage,
+          deliveryPercentage: configuration.deliveryPercentage,
+          collectionIds: configuration.collectionIds || [],
+        }),
+      },
+    });
+
+    return { errors: [] };
+  } catch (error) {
+    console.error("Error updating discount in database:", error);
+    return {
+      errors: [
+        {
+          field: ["database"],
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to update discount in database",
+        },
+      ],
+    };
+  }
 }
 
 export async function getDiscount(request: Request, id: string) {
@@ -381,7 +575,7 @@ export async function getDiscount(request: Request, id: string) {
   };
 }
 
-export async function getDiscountsFromDB() {
+export async function getDiscounts() {
   const discounts = await prisma.discount.findMany();
   return discounts.map((discount) => ({
     id: discount.id,
@@ -401,6 +595,9 @@ export async function getDiscountsFromDB() {
     status: discount.status,
     used: discount.usedCount,
     description: discount.description,
+    value: discount.value,
+    usageLimit: discount.usageLimit,
+    configuration: JSON.parse(discount.configuration as string),
   }));
 }
 
