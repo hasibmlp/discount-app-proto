@@ -82,6 +82,22 @@ export const CREATE_CODE_DISCOUNT = `
     discountCreate: discountCodeAppCreate(codeAppDiscount: $discount) {
       codeAppDiscount {
         discountId
+        title
+        discountClasses
+        combinesWith {
+          orderDiscounts
+          productDiscounts
+          shippingDiscounts
+        }
+        startsAt
+        endsAt
+        usageLimit
+        appliesOncePerCustomer
+        codes(first: 1) {
+          nodes {
+            code
+          }
+        }
       }
       userErrors {
         code

@@ -1,3 +1,4 @@
+import { determineDiscountStatus } from "~/utils/discount";
 import {
   CREATE_CODE_DISCOUNT,
   CREATE_AUTOMATIC_DISCOUNT,
@@ -6,8 +7,9 @@ import {
   GET_DISCOUNT,
 } from "../graphql/discounts";
 import { authenticate } from "../shopify.server";
-import type { DiscountClass } from "../types/admin.types";
+import type { DiscountClass, Discount as ShopifyDiscount } from "../types/admin.types";
 import { DiscountMethod } from "../types/types";
+import { DiscountType, Discount } from "@prisma/client";
 
 interface BaseDiscount {
   functionId?: string;
@@ -43,7 +45,8 @@ export async function createCodeDiscount(
   appliesOncePerCustomer: boolean,
   configuration: DiscountConfiguration,
 ) {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+  const shopDomain = session.shop;
   const response = await admin.graphql(CREATE_CODE_DISCOUNT, {
     variables: {
       discount: {
@@ -70,10 +73,70 @@ export async function createCodeDiscount(
   });
 
   const responseJson = await response.json();
+  const shopifyUserErrors = responseJson.data.discountCreate?.userErrors as UserError[];
+
+  console.log(responseJson.data.discountCreate);
+
+  const {
+    discountId: shopifyDiscountId,
+    title: shopifyDiscountTitle,
+    codes: shopifyDiscountCodes,
+    combinesWith: shopifyDiscountCombinesWith,
+    usageLimit: shopifyDiscountUsageLimit,
+    appliesOncePerCustomer: shopifyDiscountAppliesOncePerCustomer,
+    startsAt: shopifyDiscountStartsAt,
+    endsAt: shopifyDiscountEndsAt,
+    discountClasses: shopifyDiscountDiscountClasses,
+  } = responseJson.data.discountCreate.codeAppDiscount;
+
+  if(shopifyUserErrors.length > 0) {
+    return {
+      errors: shopifyUserErrors,
+      discount: null,
+    }
+  }
+
+  if (!shopifyDiscountTitle || !shopifyDiscountCodes || !shopifyDiscountCombinesWith || !shopifyDiscountUsageLimit || !shopifyDiscountAppliesOncePerCustomer || !shopifyDiscountStartsAt || !shopifyDiscountEndsAt || !shopifyDiscountDiscountClasses) {
+    return {
+      errors: [{ message: "Failed to create discount on Shopify or retrieve its ID." }] as UserError[],
+      discount: null,
+      shopifyDiscount: null,
+    };
+  }
+
+  let discountRecord: Discount | null = null;
+  try {
+    discountRecord = await prisma.discount.create({
+      data: {
+        shop: shopDomain,
+        shopifyDiscountId: shopifyDiscountId,
+        name: shopifyDiscountTitle,
+        description: 'sample description',
+        code: code,
+        discountMethod: DiscountMethod.Code,
+        discountType: DiscountType.PERCENTAGE,
+        value: 10,
+        usageLimit: shopifyDiscountUsageLimit,
+        limitPerCustomer: shopifyDiscountAppliesOncePerCustomer ? 1 : null,
+        startsAt: shopifyDiscountStartsAt,
+        endsAt: shopifyDiscountEndsAt,
+        status: determineDiscountStatus(shopifyDiscountStartsAt, shopifyDiscountEndsAt),
+      },
+    });
+  } catch (error: any) {
+    console.error(error);
+    return {
+      errors: [
+        ...(shopifyUserErrors || []),
+        { field: ["database"], message: `Failed to save discount to local database: ${error.message}` }
+      ] as UserError[],
+      discount: null,
+    };
+  }
 
   return {
     errors: responseJson.data.discountCreate?.userErrors as UserError[],
-    discount: responseJson.data.discountCreate?.codeAppDiscount,
+    discount: discountRecord,
   };
 }
 
@@ -262,4 +325,27 @@ export async function getDiscount(request: Request, id: string) {
       },
     },
   };
+}
+
+export async function getDiscountsFromDB() {
+  const discounts = await prisma.discount.findMany();
+  return discounts.map((discount) => ({
+    id: discount.id,
+    shopifyDiscountId: discount.shopifyDiscountId,
+    title: discount.name,
+    method: discount.discountMethod,
+    type: discount.discountType,
+    code: discount.code,
+    combinesWith: {
+      orderDiscounts: false,
+      productDiscounts: false,
+      shippingDiscounts: false,
+    },
+    startsAt: discount.startsAt,
+    endsAt: discount.endsAt,
+    createdAt: discount.createdAt,
+    status: discount.status,
+    used: discount.usedCount,
+    description: discount.description,
+  }));
 }
