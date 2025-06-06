@@ -7,4 +7,4 @@ COPY . .
 RUN npm install
 RUN npm run build
 
-CMD ["npm", "run", "start"]
+CMD ["sh", "-c", "echo 'Container starting...' && echo '--- Running Database Migrations ---' && npx prisma migrate deploy && echo '--- Migrations Finished ---' && echo '--- Starting Application Server ---' && npm run start"]
