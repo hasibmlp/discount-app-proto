@@ -19,19 +19,20 @@ This app provides a comprehensive discount management system that allows merchan
 3. Fill in the app details:
    - App name: Discount App
    - App URL: `https://discount-app-proto.onrender.com`
-4. Configure the following URLs:
+4. After creating the app, go to the Configuration tab
+5. In the URLs section, add the following:
+   - App URL: `https://discount-app-proto.onrender.com`
    - Allowed redirection URL(s):
      ```
      https://discount-app-proto.onrender.com/auth/callback
      https://discount-app-proto.onrender.com/auth/shopify/callback
      https://discount-app-proto.onrender.com/api/auth/callback
      ```
-5. Save the app configuration
-6. Go to the Distribution tab in your app settings
-7. Select "Custom distribution"
-8. Enter your store URL (e.g., `your-store.myshopify.com`)
-9. Click "Install app" to add the app to your store
-
+6. Save the app configuration
+7. Go to the Distribution tab in your app settings
+8. Select "Custom distribution"
+9. Enter your store URL (e.g., `your-store.myshopify.com`)
+10. Click "Install app" to add the app to your store
 
 ## Development Setup
 
