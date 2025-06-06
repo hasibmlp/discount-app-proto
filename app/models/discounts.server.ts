@@ -17,6 +17,7 @@ import type { DiscountClass } from "../types/admin.types";
 import { DiscountMethod } from "../types/types";
 import { DiscountType, Discount, CombinesWith } from "@prisma/client";
 import { GET_TOP_DISCOUNTED_PRODUCTS } from "~/graphql/products";
+import prisma from "../db.server";
 
 interface BaseDiscount {
   functionId?: string;
@@ -180,7 +181,7 @@ export async function getTopDiscountedProducts(request: Request) {
       let discountIdentifier: string | null =
         discountApplication.title || discountApplication.code || null;
 
-      if (discountIdentifier && discountIdentifier !== "") {  
+      if (discountIdentifier && discountIdentifier !== "") {
         const discountInDb = await prisma.discount.findUnique({
           where: {
             shop_name_unique_constraint: {
