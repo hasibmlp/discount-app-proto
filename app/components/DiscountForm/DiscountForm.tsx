@@ -44,6 +44,9 @@ interface DiscountFormProps {
       cartLinePercentage: string;
       orderPercentage: string;
       deliveryPercentage: string;
+      cartLineFixedAmount: string;
+      orderFixedAmount: string;
+      deliveryFixedAmount: string;
       metafieldId?: string;
       collectionIds?: string[];
     };
@@ -208,13 +211,13 @@ export function DiscountForm({
                   formState.configuration.deliveryPercentage
                 ),
                 cartLineFixedAmount: parseFloat(
-                  formState.configuration.cartLineFixedAmount || "0"
+                  formState.configuration.cartLineFixedAmount
                 ),
                 orderFixedAmount: parseFloat(
-                  formState.configuration.orderFixedAmount || "0"
+                  formState.configuration.orderFixedAmount
                 ),
                 deliveryFixedAmount: parseFloat(
-                  formState.configuration.deliveryFixedAmount || "0"
+                  formState.configuration.deliveryFixedAmount
                 ),
                 collectionIds: formState.configuration.collectionIds || [],
               },

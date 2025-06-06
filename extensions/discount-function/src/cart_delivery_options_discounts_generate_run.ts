@@ -24,7 +24,11 @@ export function cartDeliveryOptionsDiscountsGenerateRun(
     throw new Error("Invalid discount configuration");
   }
 
-  if (!hasShippingDiscountClass && !discountConfiguration) {
+  const hasValidConfiguration = 
+    discountConfiguration.deliveryFixedAmount > 0 || 
+    discountConfiguration.deliveryPercentage > 0;
+
+  if (!hasShippingDiscountClass && !hasValidConfiguration) {
     return { operations: [] };
   }
 

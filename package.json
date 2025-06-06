@@ -18,7 +18,8 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "type-check": "tsc --noEmit",
-    "prisma:seed": "prisma/seed.ts"
+    "prisma:seed": "prisma/seed.ts",
+    "test": "vitest"
   },
   "type": "module",
   "engines": {
