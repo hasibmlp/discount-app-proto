@@ -1,109 +1,85 @@
-# Shopify Discount Functions Remix App
+# Shopify Discount App
 
-> [!NOTE]
-> Instead of cloning this repo, you can use the Shopify CLI to create a new app using the following command:
->
-> ```bash
-> shopify app init --template https://github.com/Shopify/discounts-reference-app/examples/remix-app
-> ```
-
-This app demonstrates the discount Functions API, which allows merchants to combine multiple discount types (product, order, and shipping) in a single function. It serves as a reference implementation.
+A Shopify app for managing complex discounts with support for multiple discount types (product, order, and shipping) in a single function.
 
 ## Overview
 
-The discount Function API allows you to create complex discounts by allowing a single automatic discount or discount code to produce discount candidates of multiple classes. This eliminates the need to configure multiple separate Functions for different discount types.
+This app provides a comprehensive discount management system that allows merchants to:
 
-### Key Features
-
-- **Multi-class Discounts**
-
-  - Combine product, order, and shipping discounts in one Function
-  - Target specific product collections
-  - Apply percentage-based discounts
-
-- **Flexible Configuration**
-
-  - Create automatic discounts or discount codes
-  - Set usage limits
-  - Configure combination rules with other discounts
-
-- **Developer Experience**
-  - Built with TypeScript and Remix
-  - Uses Shopify's Polaris design system
-  - Shopify GraphQL AdminAPI integration
+- Create and manage automatic discounts and discount codes
+- Combine multiple discount types in a single function
+- Target specific product collections
+- Apply percentage-based or fixed amount discounts
+- Set usage limits and combination rules
 
 ## Prerequisites
 
-1. Node.js 18.x or later
-2. [Shopify Partner account](https://partners.shopify.com/signup)
-3. Development store or [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store)
-4. [Shopify CLI](https://shopify.dev/docs/apps/tools/cli) installed
+1. [nvm](https://github.com/nvm-sh/nvm) (Node Version Manager)
+2. Node.js 18.x or later
+3. [Shopify Partner account](https://partners.shopify.com/signup)
+4. Development store or [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store)
+5. [Shopify CLI](https://shopify.dev/docs/apps/tools/cli) installed
+6. Docker and Docker Compose (for local database)
 
-## Discount Function
+## Development Setup
 
-To setup your discount function, you can use the Shopify CLI to create a new function.
-
-```bash
-shopify app generate extension --template discount
-```
-
-Then follow the instructions found in the [Build a discount UI with Remix](https://shopify-dev.myshopify.io/docs/apps/build/discounts/build-ui-with-remix?extension=rust#update-the-discount-function-extension-to-read-metafield-data) tutorial.
-
-## Development
-
-### Initial Setup
+1. Install dependencies:
 
 ```bash
+# Use the correct Node.js version
+nvm use
+
 # Install dependencies
-pnpm install
-
-# Set up the database
-pnpm run setup
+npm install
 ```
 
-### Running the App
+2. Set up environment variables:
 
 ```bash
-# Start the development server
-pnpm run dev
+cp .env.example .env
 ```
 
-## Deployment
+Edit `.env` with your Shopify app credentials.
 
-1. Build the app:
+3. Start the local PostgreSQL database using Docker Compose:
 
 ```bash
-pnpm run build
+docker-compose up -d
 ```
 
-2. Deploy to your preferred hosting platform ([deployment guide](https://shopify.dev/docs/apps/deployment/web))
-
-3. Set required environment variables:
+4. Set up the database:
 
 ```bash
-NODE_ENV=production
+npm run setup
 ```
 
-## Troubleshooting
-
-### Missing Database Tables
-
-If you encounter the error `The table 'main.Session' does not exist`:
+5. Start the development server:
 
 ```bash
-pnpm run setup
+npm run dev
 ```
 
-### OAuth Loop Issues
+## Testing
 
-If authentication loops when changing scopes:
+The project uses Vitest for testing. To run tests:
 
 ```bash
-# Update app scopes
-pnpm run deploy
+npm test
+```
 
-# Or reset during development
-pnpm run dev --reset
+## Project Structure
+
+```
+app/
+├── components/     # React components
+├── hooks/         # Custom React hooks
+├── models/        # Database models
+├── routes/        # Remix routes
+├── types/         # TypeScript type definitions
+└── utils/         # Utility functions
+
+extensions/
+└── discount-function/  # Shopify discount function
 ```
 
 ## Tech Stack
@@ -113,3 +89,8 @@ pnpm run dev --reset
 - [Polaris](https://polaris.shopify.com/) - Design system
 - [TypeScript](https://www.typescriptlang.org/) - Type safety
 - [Prisma](https://www.prisma.io/) - Database ORM
+- [Vitest](https://vitest.dev/) - Testing framework
+- [React Testing Library](https://testing-library.com/) - Component testing
+- [PostgreSQL](https://www.postgresql.org/) - Database
+- [Docker](https://www.docker.com/) - Containerization
+
