@@ -12,7 +12,28 @@ This app provides a comprehensive discount management system that allows merchan
 - Apply percentage-based or fixed amount discounts
 - Set usage limits and combination rules
 
-## Prerequisites
+## Installing the App
+
+1. Go to your [Shopify Partners Dashboard](https://partners.shopify.com)
+2. Navigate to Apps > Create App
+3. Fill in the app details:
+   - App name: Discount App
+   - App URL: `https://discount-app-proto.onrender.com`
+4. Configure the following URLs:
+   - Allowed redirection URL(s):
+     ```
+     https://discount-app-proto.onrender.com/auth/callback
+     https://discount-app-proto.onrender.com/auth/shopify/callback
+     https://discount-app-proto.onrender.com/api/auth/callback
+     ```
+5. Save the app configuration
+6. Go to the Distribution tab in your app settings
+7. Select "Custom distribution"
+8. Enter your store URL (e.g., `your-store.myshopify.com`)
+9. Click "Install app" to add the app to your store
+
+
+## Development Setup
 
 1. [nvm](https://github.com/nvm-sh/nvm) (Node Version Manager)
 2. Node.js 18.x or later
@@ -21,7 +42,7 @@ This app provides a comprehensive discount management system that allows merchan
 5. [Shopify CLI](https://shopify.dev/docs/apps/tools/cli) installed
 6. Docker and Docker Compose (for local database)
 
-## Development Setup
+### Setup Steps
 
 1. Install dependencies:
 
@@ -93,4 +114,3 @@ extensions/
 - [React Testing Library](https://testing-library.com/) - Component testing
 - [PostgreSQL](https://www.postgresql.org/) - Database
 - [Docker](https://www.docker.com/) - Containerization
-
