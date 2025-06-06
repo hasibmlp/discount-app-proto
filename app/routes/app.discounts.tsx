@@ -21,14 +21,17 @@ import {
   updateDiscountStatusBulk,
 } from "../models/discounts.server";
 import { getDiscountDescription } from "~/utils/discount";
+import { authenticate } from "~/shopify.server";
 const resourceName = {
   singular: "discount",
   plural: "discounts",
 };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
+  const { session } = await authenticate.admin(request);
+
   const functions = await getFunctions(request);
-  const discounts = await getDiscounts();
+  const discounts = await getDiscounts(session.shop);
   return { functions, discounts };
 };
 

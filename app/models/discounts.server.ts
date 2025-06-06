@@ -107,8 +107,12 @@ export async function getDiscount(request: Request, id: string) {
   };
 }
 
-export async function getDiscounts() {
-  const discounts = await prisma.discount.findMany();
+export async function getDiscounts(shop: string) {
+  const discounts = await prisma.discount.findMany({
+    where: {
+      shop,
+    },
+  });
   return discounts.map((discount) => ({
     id: discount.id,
     shopifyDiscountId: discount.shopifyDiscountId,
