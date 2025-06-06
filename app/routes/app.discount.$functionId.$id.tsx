@@ -41,6 +41,9 @@ interface LoaderData {
       cartLinePercentage: number;
       orderPercentage: number;
       deliveryPercentage: number;
+      cartLineFixedAmount: number;
+      orderFixedAmount: number;
+      deliveryFixedAmount: number;
       metafieldId: string;
       collectionIds: string[];
     };
@@ -172,9 +175,13 @@ export default function VolumeEdit() {
       cartLinePercentage: String(rawDiscount.configuration.cartLinePercentage),
       orderPercentage: String(rawDiscount.configuration.orderPercentage),
       deliveryPercentage: String(rawDiscount.configuration.deliveryPercentage),
-      cartLineFixedAmount: String(rawDiscount.configuration.cartLineFixedAmount),
+      cartLineFixedAmount: String(
+        rawDiscount.configuration.cartLineFixedAmount,
+      ),
       orderFixedAmount: String(rawDiscount.configuration.orderFixedAmount),
-      deliveryFixedAmount: String(rawDiscount.configuration.deliveryFixedAmount),
+      deliveryFixedAmount: String(
+        rawDiscount.configuration.deliveryFixedAmount,
+      ),
       metafieldId: rawDiscount.configuration.metafieldId,
       collectionIds: rawDiscount.configuration.collectionIds || [],
     },
