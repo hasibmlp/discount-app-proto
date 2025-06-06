@@ -141,7 +141,7 @@ export default function Index() {
         <IndexTable.Cell>
           <Link
             dataPrimaryLink
-            url={`/app/discount/${functions[0].id}/${shopifyDiscountId.replace("gid://shopify/DiscountCodeNode/", "")}`}
+            url={`/app/discount/${functions[0].id}/${method === "CODE" ? shopifyDiscountId.replace("gid://shopify/DiscountCodeNode/", "") : shopifyDiscountId.replace("gid://shopify/DiscountNode/", "")}`}
             removeUnderline
             monochrome
           >
@@ -232,4 +232,3 @@ export default function Index() {
     </Page>
   );
 }
-
