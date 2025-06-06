@@ -34,7 +34,6 @@ model Discount {
   shopifyDiscountId String @unique
 
   name             String
-  description      String
   code             String
   discountClasses  DiscountClass[]
   discountMethod   DiscountMethod
@@ -53,6 +52,10 @@ model Discount {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  usages DiscountUsage[]
+
+  @@unique([shop, name], name: "shop_name_unique_constraint")
 }
 
 enum DiscountMethod {
@@ -84,4 +87,21 @@ enum DiscountClass {
   ORDER
   PRODUCT
   SHIPPING
+}
+
+model DiscountUsage {
+  id           String   @id @default(uuid())
+  shop         String
+  discountId   String
+  discount     Discount @relation(fields: [discountId], references: [id])
+  discountName String
+  productId    String
+  productTitle String
+  orderId      String
+  orderNumber  String
+  createdAt    DateTime @default(now())
+
+  @@index([discountId])
+  @@index([productId])
+  @@index([shop])
 }

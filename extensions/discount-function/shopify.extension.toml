@@ -2,7 +2,7 @@ api_version = "2025-04"
 
 [[extensions]]
 name = "t:name"
-handle = "discount-function-rs"
+handle = "discount-function"
 type = "function"
 
 description = "t:description"
@@ -20,11 +20,3 @@ description = "t:description"
   [extensions.build]
   command = ""
   path = "dist/function.wasm"
-
-[extensions.input.variables]
-namespace = "$app:example-discounts--ui-extension"
-key = "function-configuration"
-
-[extensions.ui.paths]
-create = "/app/discount/:functionId/new"
-details = "/app/discount/:functionId/:id"

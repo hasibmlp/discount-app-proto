@@ -4,25 +4,35 @@ import {
   ProductDiscountSelectionStrategy,
   CartInput,
   CartLinesDiscountsGenerateRunResult,
-} from '../generated/api';
-
+} from "../generated/api";
 
 export function cartLinesDiscountsGenerateRun(
-  input: CartInput,
+  input: CartInput
 ): CartLinesDiscountsGenerateRunResult {
   if (!input.cart.lines.length) {
-    throw new Error('No cart lines found');
+    throw new Error("No cart lines found");
   }
 
   const hasOrderDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Order,
+    DiscountClass.Order
   );
   const hasProductDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Product,
+    DiscountClass.Product
   );
 
-  if (!hasOrderDiscountClass && !hasProductDiscountClass) {
-    return {operations: []};
+  let discountConfiguration: any;
+  try {
+    discountConfiguration = JSON.parse(input.discount.metafield?.value || "{}");
+  } catch (error) {
+    throw new Error("Invalid discount configuration");
+  }
+
+  if (
+    !hasOrderDiscountClass &&
+    !hasProductDiscountClass &&
+    !discountConfiguration
+  ) {
+    return { operations: [] };
   }
 
   const maxCartLine = input.cart.lines.reduce((maxLine, line) => {
@@ -39,7 +49,7 @@ export function cartLinesDiscountsGenerateRun(
       orderDiscountsAdd: {
         candidates: [
           {
-            message: '10% OFF ORDER',
+            message: discountConfiguration.discountMessage,
             targets: [
               {
                 orderSubtotal: {
@@ -47,11 +57,18 @@ export function cartLinesDiscountsGenerateRun(
                 },
               },
             ],
-            value: {
-              percentage: {
-                value: 10,
-              },
-            },
+            value:
+              discountConfiguration.orderFixedAmount > 0
+                ? {
+                    fixedAmount: {
+                      amount: discountConfiguration.orderFixedAmount,
+                    },
+                  }
+                : {
+                    percentage: {
+                      value: discountConfiguration.orderPercentage,
+                    },
+                  },
           },
         ],
         selectionStrategy: OrderDiscountSelectionStrategy.First,
@@ -64,7 +81,7 @@ export function cartLinesDiscountsGenerateRun(
       productDiscountsAdd: {
         candidates: [
           {
-            message: '20% OFF PRODUCT',
+            message: discountConfiguration.discountMessage,
             targets: [
               {
                 cartLine: {
@@ -72,11 +89,18 @@ export function cartLinesDiscountsGenerateRun(
                 },
               },
             ],
-            value: {
-              percentage: {
-                value: 20,
-              },
-            },
+            value:
+              discountConfiguration.cartLineFixedAmount > 0
+                ? {
+                    fixedAmount: {
+                      amount: discountConfiguration.cartLineFixedAmount,
+                    },
+                  }
+                : {
+                    percentage: {
+                      value: discountConfiguration.productPercentage,
+                    },
+                  },
           },
         ],
         selectionStrategy: ProductDiscountSelectionStrategy.First,

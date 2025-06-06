@@ -8,7 +8,6 @@ import {
   createAutomaticDiscount,
 } from "../models/discounts.server";
 import { DiscountMethod } from "../types/types";
-import { returnToDiscounts } from "../utils/navigation";
 import { authenticate } from "~/shopify.server";
 
 export const loader = async () => {
@@ -60,6 +59,9 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
         cartLinePercentage: parseFloat(configuration.cartLinePercentage),
         orderPercentage: parseFloat(configuration.orderPercentage),
         deliveryPercentage: parseFloat(configuration.deliveryPercentage),
+        cartLineFixedAmount: parseFloat(configuration.cartLineFixedAmount),
+        orderFixedAmount: parseFloat(configuration.orderFixedAmount),
+        deliveryFixedAmount: parseFloat(configuration.deliveryFixedAmount),
         collectionIds: configuration.collectionIds || [],
       },
     );
@@ -68,6 +70,9 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
       cartLinePercentage: parseFloat(configuration.cartLinePercentage),
       orderPercentage: parseFloat(configuration.orderPercentage),
       deliveryPercentage: parseFloat(configuration.deliveryPercentage),
+      cartLineFixedAmount: parseFloat(configuration.cartLineFixedAmount),
+      orderFixedAmount: parseFloat(configuration.orderFixedAmount),
+      deliveryFixedAmount: parseFloat(configuration.deliveryFixedAmount),
       collectionIds: configuration.collectionIds || [],
     });
   }
@@ -76,7 +81,7 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
     return { errors: result.errors };
   }
 
-  return redirect("/app");
+  return redirect("/app/discounts");
 };
 // [END build-the-ui.add-action]
 
@@ -126,7 +131,7 @@ export default function VolumeNew() {
   return (
     <Page>
       <ui-title-bar title="Create product, order, and shipping discount">
-        <button variant="breadcrumb" onClick={() => navigate("/app")}>
+        <button variant="breadcrumb" onClick={() => navigate("/app/discounts")}>
           Discounts
         </button>
       </ui-title-bar>

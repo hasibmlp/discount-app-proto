@@ -6,5 +6,6 @@ COPY . .
 
 RUN npm install
 RUN npm run build
+RUN npm run setup
 
 CMD ["npm", "run", "start"]

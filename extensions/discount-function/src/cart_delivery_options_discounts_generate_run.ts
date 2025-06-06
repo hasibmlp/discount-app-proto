@@ -6,7 +6,7 @@ import {
 } from "../generated/api";
 
 export function cartDeliveryOptionsDiscountsGenerateRun(
-  input: DeliveryInput,
+  input: DeliveryInput
 ): CartDeliveryOptionsDiscountsGenerateRunResult {
   const firstDeliveryGroup = input.cart.deliveryGroups[0];
   if (!firstDeliveryGroup) {
@@ -14,12 +14,32 @@ export function cartDeliveryOptionsDiscountsGenerateRun(
   }
 
   const hasShippingDiscountClass = input.discount.discountClasses.includes(
-    DiscountClass.Shipping,
+    DiscountClass.Shipping
   );
 
-  if (!hasShippingDiscountClass) {
-    return {operations: []};
+  let discountConfiguration: any;
+  try {
+    discountConfiguration = JSON.parse(input.discount.metafield?.value || "{}");
+  } catch (error) {
+    throw new Error("Invalid discount configuration");
   }
+
+  if (!hasShippingDiscountClass && !discountConfiguration) {
+    return { operations: [] };
+  }
+
+  const value =
+    discountConfiguration.deliveryFixedAmount > 0
+      ? {
+          fixedAmount: {
+            amount: discountConfiguration.deliveryFixedAmount,
+          },
+        }
+      : {
+          percentage: {
+            value: discountConfiguration.deliveryPercentage,
+          },
+        };
 
   return {
     operations: [
@@ -27,7 +47,7 @@ export function cartDeliveryOptionsDiscountsGenerateRun(
         deliveryDiscountsAdd: {
           candidates: [
             {
-              message: "FREE DELIVERY",
+              message: discountConfiguration.discountMessage,
               targets: [
                 {
                   deliveryGroup: {
@@ -35,11 +55,7 @@ export function cartDeliveryOptionsDiscountsGenerateRun(
                   },
                 },
               ],
-              value: {
-                percentage: {
-                  value: 100,
-                },
-              },
+              value,
             },
           ],
           selectionStrategy: DeliveryDiscountSelectionStrategy.All,

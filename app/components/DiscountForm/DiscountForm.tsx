@@ -12,7 +12,6 @@ import {
   Select,
   InlineStack,
 } from "@shopify/polaris";
-import { returnToDiscounts } from "app/utils/navigation";
 import { useCallback, useMemo, useState } from "react";
 
 import { useDiscountForm } from "../../hooks/useDiscountForm";
@@ -91,7 +90,7 @@ export function DiscountForm({
         ? "End date must be after start date"
         : undefined;
     },
-    [formState.startDate],
+    [formState.startDate]
   );
 
   const handleEndDateChange = useCallback(
@@ -101,7 +100,7 @@ export function DiscountForm({
         setField("endDate", date);
       }
     },
-    [validateEndDate, setField],
+    [validateEndDate, setField]
   );
 
   const errorBanner = useMemo(
@@ -120,7 +119,7 @@ export function DiscountForm({
           </Banner>
         </Layout.Section>
       ) : null,
-    [submitErrors],
+    [submitErrors]
   );
 
   const successBanner = useMemo(
@@ -132,18 +131,18 @@ export function DiscountForm({
           </Banner>
         </Layout.Section>
       ) : null,
-    [success],
+    [success]
   );
 
   const handleCollectionSelect = useCallback(
     async (selectedCollections: { id: string; title: string }[]) => {
       setConfigField(
         "collectionIds",
-        selectedCollections.map((collection) => collection.id),
+        selectedCollections.map((collection) => collection.id)
       );
       setCollections(selectedCollections);
     },
-    [setConfigField],
+    [setConfigField]
   );
 
   const handleDiscountClassChange = useCallback(
@@ -153,11 +152,11 @@ export function DiscountForm({
         checked
           ? [...formState.discountClasses, discountClassValue]
           : formState.discountClasses.filter(
-              (discountClass) => discountClass !== discountClassValue,
-            ),
+              (discountClass) => discountClass !== discountClassValue
+            )
       );
     },
-    [formState.discountClasses, setField],
+    [formState.discountClasses, setField]
   );
 
   const handleEndDateCheckboxChange = useCallback(
@@ -170,7 +169,7 @@ export function DiscountForm({
         setField("endDate", tomorrow);
       }
     },
-    [formState.startDate, formState.endDate, today, setField],
+    [formState.startDate, formState.endDate, today, setField]
   );
 
   return (
@@ -200,13 +199,22 @@ export function DiscountForm({
                   ? { metafieldId: formState.configuration.metafieldId }
                   : {}),
                 cartLinePercentage: parseFloat(
-                  formState.configuration.cartLinePercentage,
+                  formState.configuration.cartLinePercentage
                 ),
                 orderPercentage: parseFloat(
-                  formState.configuration.orderPercentage,
+                  formState.configuration.orderPercentage
                 ),
                 deliveryPercentage: parseFloat(
-                  formState.configuration.deliveryPercentage,
+                  formState.configuration.deliveryPercentage
+                ),
+                cartLineFixedAmount: parseFloat(
+                  formState.configuration.cartLineFixedAmount || "0"
+                ),
+                orderFixedAmount: parseFloat(
+                  formState.configuration.orderFixedAmount || "0"
+                ),
+                deliveryFixedAmount: parseFloat(
+                  formState.configuration.deliveryFixedAmount || "0"
                 ),
                 collectionIds: formState.configuration.collectionIds || [],
               },
@@ -268,19 +276,19 @@ export function DiscountForm({
                     <Checkbox
                       label="Product discount"
                       checked={formState.discountClasses.includes(
-                        DiscountClass.Product,
+                        DiscountClass.Product
                       )}
                       onChange={(checked) =>
                         handleDiscountClassChange(
                           DiscountClass.Product,
-                          checked,
+                          checked
                         )
                       }
                     />
                     <Checkbox
                       label="Order discount"
                       checked={formState.discountClasses.includes(
-                        DiscountClass.Order,
+                        DiscountClass.Order
                       )}
                       onChange={(checked) =>
                         handleDiscountClassChange(DiscountClass.Order, checked)
@@ -289,12 +297,12 @@ export function DiscountForm({
                     <Checkbox
                       label="Shipping discount"
                       checked={formState.discountClasses.includes(
-                        DiscountClass.Shipping,
+                        DiscountClass.Shipping
                       )}
                       onChange={(checked) =>
                         handleDiscountClassChange(
                           DiscountClass.Shipping,
-                          checked,
+                          checked
                         )
                       }
                     />
@@ -313,22 +321,67 @@ export function DiscountForm({
 
                   <BlockStack gap="400">
                     {formState.discountClasses?.includes(
-                      DiscountClass.Product,
+                      DiscountClass.Product
                     ) ? (
                       <>
-                        <TextField
-                          label="Product discount percentage"
-                          autoComplete="on"
-                          type="number"
-                          min="0"
-                          max="100"
-                          suffix="%"
-                          value={formState.configuration.cartLinePercentage}
-                          onChange={(value) =>
-                            setConfigField("cartLinePercentage", value)
-                          }
-                          helpText="Percentage discount for products"
-                        />
+                        <BlockStack gap="200">
+                          <Text as="p" variant="bodyMd">
+                            Product discount type
+                          </Text>
+                          <Select
+                            label="Discount type"
+                            options={[
+                              { label: "Percentage", value: "percentage" },
+                              { label: "Fixed amount", value: "fixed" },
+                            ]}
+                            value={
+                              formState.configuration.cartLineFixedAmount !==
+                              "0"
+                                ? "fixed"
+                                : "percentage"
+                            }
+                            onChange={(value) => {
+                              if (value === "fixed") {
+                                setConfigField("cartLinePercentage", "0");
+                                setConfigField("cartLineFixedAmount", "10");
+                              } else {
+                                setConfigField("cartLineFixedAmount", "0");
+                                setConfigField("cartLinePercentage", "10");
+                              }
+                            }}
+                          />
+                          {formState.configuration.cartLineFixedAmount !==
+                          "0" ? (
+                            <TextField
+                              label="Product fixed amount"
+                              autoComplete="on"
+                              type="number"
+                              min="0"
+                              prefix="$"
+                              value={
+                                formState.configuration.cartLineFixedAmount
+                              }
+                              onChange={(value) =>
+                                setConfigField("cartLineFixedAmount", value)
+                              }
+                              helpText="Fixed amount discount for products"
+                            />
+                          ) : (
+                            <TextField
+                              label="Product discount percentage"
+                              autoComplete="on"
+                              type="number"
+                              min="0"
+                              max="100"
+                              suffix="%"
+                              value={formState.configuration.cartLinePercentage}
+                              onChange={(value) =>
+                                setConfigField("cartLinePercentage", value)
+                              }
+                              helpText="Percentage discount for products"
+                            />
+                          )}
+                        </BlockStack>
                         <CollectionPicker
                           onSelect={handleCollectionSelect}
                           selectedCollectionIds={
@@ -343,39 +396,121 @@ export function DiscountForm({
                     ) : null}
 
                     {formState.discountClasses?.includes(
-                      DiscountClass.Order,
+                      DiscountClass.Order
                     ) ? (
-                      <TextField
-                        label="Order discount percentage"
-                        autoComplete="on"
-                        type="number"
-                        min="0"
-                        max="100"
-                        suffix="%"
-                        value={formState.configuration.orderPercentage}
-                        onChange={(value) =>
-                          setConfigField("orderPercentage", value)
-                        }
-                        helpText="Percentage discount for orders"
-                      />
+                      <BlockStack gap="200">
+                        <Text as="p" variant="bodyMd">
+                          Order discount type
+                        </Text>
+                        <Select
+                          label="Discount type"
+                          options={[
+                            { label: "Percentage", value: "percentage" },
+                            { label: "Fixed amount", value: "fixed" },
+                          ]}
+                          value={
+                            formState.configuration.orderFixedAmount !== "0"
+                              ? "fixed"
+                              : "percentage"
+                          }
+                          onChange={(value) => {
+                            if (value === "fixed") {
+                              setConfigField("orderPercentage", "0");
+                              setConfigField("orderFixedAmount", "10");
+                            } else {
+                              setConfigField("orderFixedAmount", "0");
+                              setConfigField("orderPercentage", "10");
+                            }
+                          }}
+                        />
+                        {formState.configuration.orderFixedAmount !== "0" ? (
+                          <TextField
+                            label="Order fixed amount"
+                            autoComplete="on"
+                            type="number"
+                            min="0"
+                            prefix="$"
+                            value={formState.configuration.orderFixedAmount}
+                            onChange={(value) =>
+                              setConfigField("orderFixedAmount", value)
+                            }
+                            helpText="Fixed amount discount for orders"
+                          />
+                        ) : (
+                          <TextField
+                            label="Order discount percentage"
+                            autoComplete="on"
+                            type="number"
+                            min="0"
+                            max="100"
+                            suffix="%"
+                            value={formState.configuration.orderPercentage}
+                            onChange={(value) =>
+                              setConfigField("orderPercentage", value)
+                            }
+                            helpText="Percentage discount for orders"
+                          />
+                        )}
+                      </BlockStack>
                     ) : null}
 
                     {formState.discountClasses?.includes(
-                      DiscountClass.Shipping,
+                      DiscountClass.Shipping
                     ) ? (
-                      <TextField
-                        label="Shipping discount percentage"
-                        autoComplete="on"
-                        type="number"
-                        min="0"
-                        max="100"
-                        suffix="%"
-                        value={formState.configuration.deliveryPercentage}
-                        onChange={(value) =>
-                          setConfigField("deliveryPercentage", value)
-                        }
-                        helpText="Percentage discount for shipping"
-                      />
+                      <BlockStack gap="200">
+                        <Text as="p" variant="bodyMd">
+                          Shipping discount type
+                        </Text>
+                        <Select
+                          label="Discount type"
+                          options={[
+                            { label: "Percentage", value: "percentage" },
+                            { label: "Fixed amount", value: "fixed" },
+                          ]}
+                          value={
+                            formState.configuration.deliveryFixedAmount !== "0"
+                              ? "fixed"
+                              : "percentage"
+                          }
+                          onChange={(value) => {
+                            if (value === "fixed") {
+                              setConfigField("deliveryPercentage", "0");
+                              setConfigField("deliveryFixedAmount", "10");
+                            } else {
+                              setConfigField("deliveryFixedAmount", "0");
+                              setConfigField("deliveryPercentage", "10");
+                            }
+                          }}
+                        />
+                        {formState.configuration.deliveryFixedAmount !== "0" ? (
+                          <TextField
+                            label="Shipping fixed amount"
+                            autoComplete="on"
+                            type="number"
+                            min="0"
+                            prefix="$"
+                            value={formState.configuration.deliveryFixedAmount}
+                            onChange={(value) =>
+                              setConfigField("deliveryFixedAmount", value)
+                            }
+                            helpText="Fixed amount discount for shipping"
+                          />
+                        ) : (
+                          <TextField
+                            label="Shipping discount percentage"
+                            autoComplete="on"
+                            type="number"
+                            min="0"
+                            max="100"
+                            suffix="%"
+                            value={formState.configuration.deliveryPercentage}
+                            onChange={(value) =>
+                              setConfigField("deliveryPercentage", value)
+                            }
+                            helpText="Percentage discount for shipping"
+                          />
+                        )}
+                      </BlockStack>
                     ) : null}
                   </BlockStack>
                 </BlockStack>
@@ -511,7 +646,7 @@ export function DiscountForm({
               secondaryActions={[
                 {
                   content: "Discard",
-                  url: "/app",
+                  url: "/app/discounts",
                 },
               ]}
             />

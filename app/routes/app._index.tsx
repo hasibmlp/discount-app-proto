@@ -1,240 +1,144 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useSubmit, useNavigation } from "@remix-run/react";
+import { LoaderFunctionArgs } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 import {
   Page,
-  Layout,
   Card,
-  Text,
   BlockStack,
-  IndexTable,
+  Text,
+  ResourceList,
+  ResourceItem,
+  Thumbnail,
+  InlineStack,
   Badge,
-  useIndexResourceState,
-  Link,
+  Button,
 } from "@shopify/polaris";
-import { json, redirect } from "@remix-run/node";
-
-import { getFunctions } from "../models/functions.server";
-import { DeleteIcon } from "@shopify/polaris-icons";
 import {
-  getDiscounts,
-  deleteDiscountBulk,
-  updateDiscountStatusBulk,
-} from "../models/discounts.server";
-import { getDiscountDescription } from "~/utils/discount";
-const resourceName = {
-  singular: "discount",
-  plural: "discounts",
-};
+  getDiscountUsage,
+  getTopDiscountedProducts,
+} from "~/models/discounts.server";
+import { getProductsByIds } from "~/models/products.server";
+import { navigateToProduct } from "~/utils/navigation";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const functions = await getFunctions(request);
-  const discounts = await getDiscounts();
-  return { functions, discounts };
+  const topProducts = await getTopDiscountedProducts(request);
+  const activityData = await getDiscountUsage(request);
+
+  return { topProducts, activityData };
 };
+export default function Dashboard() {
+  const { topProducts, activityData } = useLoaderData<typeof loader>();
 
-export async function action({ request }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const action = formData.get("action") as string;
-  const shopifyIds = formData.getAll("ids") as string[];
-
-  let result;
-
-  switch (action) {
-    case "delete":
-      result = await deleteDiscountBulk(request, shopifyIds);
-      break;
-    case "activate":
-      result = await updateDiscountStatusBulk(request, shopifyIds, "activate");
-      break;
-    case "deactivate":
-      result = await updateDiscountStatusBulk(
-        request,
-        shopifyIds,
-        "deactivate"
-      );
-      break;
-    default:
-      return json({ error: "Invalid action" }, { status: 400 });
-  }
-
-  if (!result.success) {
-    return json({ error: result.error }, { status: 400 });
-  }
-
-  return redirect("/app");
-}
-
-export default function Index() {
-  const { functions, discounts } = useLoaderData<typeof loader>();
-  const submit = useSubmit();
-  const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
-
-  const { selectedResources, allResourcesSelected, handleSelectionChange } =
-    useIndexResourceState(discounts);
-
-  const handleBulkAction = (action: string) => {
-    const formData = new FormData();
-    formData.append("action", action);
-
-    const selectedDiscounts = discounts.filter((discount) =>
-      selectedResources.includes(discount.id)
-    );
-
-    selectedDiscounts.forEach((discount) => {
-      if (discount.shopifyDiscountId) {
-        formData.append("ids", discount.shopifyDiscountId);
-      }
-    });
-
-    submit(formData, { method: "post" });
+  const resourceName = {
+    singular: "product",
+    plural: "products",
   };
 
-  const promotedBulkActions = [
-    {
-      content: "Activate discounts",
-      onAction: () => handleBulkAction("activate"),
-      disabled: isSubmitting || selectedResources.length === 0,
-    },
-    {
-      content: "Deactivate discounts",
-      onAction: () => handleBulkAction("deactivate"),
-      disabled: isSubmitting || selectedResources.length === 0,
-    },
-  ];
-
-  const bulkActions = [
-    {
-      icon: DeleteIcon,
-      destructive: true,
-      content: "Delete discounts",
-      onAction: () => handleBulkAction("delete"),
-      disabled: isSubmitting || selectedResources.length === 0,
-    },
-  ];
-
-  const rowMarkup = discounts.map(
-    (
-      {
-        id,
-        shopifyDiscountId,
-        method,
-        type,
-        code,
-        title,
-        createdAt,
-        status,
-        used,
-        description,
-        usageLimit,
-        startsAt,
-        endsAt,
-        configuration,
-      },
-      index
-    ) => (
-      <IndexTable.Row
-        id={id}
-        key={id}
-        selected={selectedResources.includes(id)}
-        position={index}
-      >
-        <IndexTable.Cell>
-          <Link
-            dataPrimaryLink
-            url={`/app/discount/${functions[0].id}/${shopifyDiscountId.replace("gid://shopify/DiscountCodeNode/", "")}`}
-            removeUnderline
-            monochrome
-          >
-            <BlockStack>
-              <Text fontWeight="semibold" as="span">
-                {method === "CODE" ? code?.toUpperCase() : title}
-              </Text>
-              <Text as="span" variant="bodyMd">
-                {getDiscountDescription({
-                  type,
-                  code,
-                  method,
-                  usageLimit,
-                  description,
-                  configuration,
-                })}
-              </Text>
-            </BlockStack>
-          </Link>
-        </IndexTable.Cell>
-        <IndexTable.Cell>
-          <Badge tone={status === "ACTIVE" ? "success" : "enabled"}>
-            {status}
-          </Badge>
-        </IndexTable.Cell>
-        <IndexTable.Cell>{createdAt}</IndexTable.Cell>
-        <IndexTable.Cell>
-          {method === "CODE" ? "Code" : "Automatic"}
-        </IndexTable.Cell>
-        <IndexTable.Cell>{type}</IndexTable.Cell>
-        <IndexTable.Cell>
-          <Text as="span" variant="bodyMd" alignment="end" numeric>
-            {used}
-          </Text>
-        </IndexTable.Cell>
-      </IndexTable.Row>
-    )
-  );
-
-  if (functions.length === 0) {
+  if (!topProducts.length && !activityData.length) {
     return (
-      <Page title="Discount Functions">
-        <Layout>
-          <Layout.Section>
-            <Text as="p" variant="bodyMd">
-              There is an issue with your app. Please contact support.
-            </Text>
-          </Layout.Section>
-        </Layout>
+      <Page title="Dashboard" subtitle="View your dashboard">
+        <BlockStack gap="800">
+          <Card>
+            <BlockStack gap="400" align="center">
+              <Text as="h2" variant="headingMd" alignment="center">
+                Welcome to Discounts Dashboard
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
+                Data will be available once discounts are used.
+              </Text>
+              <InlineStack gap="400" align="center">
+                <Button url="/app/discounts" variant="primary" size="large">
+                  Go to discounts
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        </BlockStack>
       </Page>
     );
   }
 
   return (
-    <Page
-      title="Discount Functions"
-      fullWidth
-      primaryAction={{
-        content: "Create discount",
-        url: `/app/discount/${functions[0].id}/new`,
-      }}
-    >
-      <Layout>
-        <Layout.Section>
-          <Card padding="0">
-            <IndexTable
+    <Page title="Dashboard" subtitle="View your dashboard">
+      <BlockStack gap="400">
+        {/* Top Products Section */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <Text as="h2" variant="headingMd">
+                Top Products with Discounts
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                Last 30 days
+              </Text>
+            </InlineStack>
+            <ResourceList
               resourceName={resourceName}
-              itemCount={discounts.length}
-              selectedItemsCount={
-                allResourcesSelected ? "All" : selectedResources.length
-              }
-              bulkActions={bulkActions}
-              promotedBulkActions={promotedBulkActions}
-              onSelectionChange={handleSelectionChange}
-              headings={[
-                { title: "Method" },
-                { title: "Status" },
-                { title: "Date" },
-                { title: "Method" },
-                { title: "Type" },
-                { title: "Used", alignment: "end" },
-              ]}
-              pagination={{
-                hasNext: true,
-                onNext: () => {},
-              }}
-            >
-              {rowMarkup}
-            </IndexTable>
-          </Card>
-        </Layout.Section>
-      </Layout>
+              items={topProducts}
+              renderItem={(item) => (
+                <ResourceItem
+                  id={item.productId}
+                  media={
+                    <Thumbnail
+                      source={item.featuredImage}
+                      alt={item.productTitle}
+                      size="small"
+                    />
+                  }
+                  accessibilityLabel={`View details for ${item.productTitle}`}
+                  onClick={() => {
+                    navigateToProduct(item.productId);
+                  }}
+                >
+                  <BlockStack>
+                    <Text as="span" variant="bodyMd" fontWeight="semibold">
+                      {item.productTitle}
+                    </Text>
+                  </BlockStack>
+                </ResourceItem>
+              )}
+            />
+          </BlockStack>
+        </Card>
+
+        {/* Activity Section */}
+        <Card>
+          <BlockStack gap="400">
+            <Text as="h2" variant="headingMd">
+              Activity
+            </Text>
+            <ResourceList
+              resourceName={{ singular: "activity", plural: "activities" }}
+              items={activityData}
+              renderItem={(item) => (
+                <ResourceItem id={item.id} onClick={() => {}}>
+                  <InlineStack
+                    gap="400"
+                    align="space-between"
+                    blockAlign="center"
+                  >
+                    <BlockStack gap="0">
+                      <Text as="span" variant="bodyMd" fontWeight="semibold">
+                        {item.productTitle}
+                      </Text>
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          Order: {item.orderNumber}
+                        </Text>
+                        <Text as="span" variant="bodySm" tone="subdued">
+                          {item.createdAt}
+                        </Text>
+                      </InlineStack>
+                    </BlockStack>
+                    <InlineStack gap="200" blockAlign="center">
+                      <Badge tone="success">{item.discountName}</Badge>
+                    </InlineStack>
+                  </InlineStack>
+                </ResourceItem>
+              )}
+            />
+          </BlockStack>
+        </Card>
+      </BlockStack>
     </Page>
   );
 }

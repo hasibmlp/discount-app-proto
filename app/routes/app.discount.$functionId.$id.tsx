@@ -86,6 +86,9 @@ export const action = async ({ params, request }: ActionFunctionArgs) => {
     cartLinePercentage: parseFloat(configuration.cartLinePercentage),
     orderPercentage: parseFloat(configuration.orderPercentage),
     deliveryPercentage: parseFloat(configuration.deliveryPercentage),
+    cartLineFixedAmount: parseFloat(configuration.cartLineFixedAmount),
+    orderFixedAmount: parseFloat(configuration.orderFixedAmount),
+    deliveryFixedAmount: parseFloat(configuration.deliveryFixedAmount),
     collectionIds: configuration.collectionIds || [],
   };
 
@@ -169,6 +172,9 @@ export default function VolumeEdit() {
       cartLinePercentage: String(rawDiscount.configuration.cartLinePercentage),
       orderPercentage: String(rawDiscount.configuration.orderPercentage),
       deliveryPercentage: String(rawDiscount.configuration.deliveryPercentage),
+      cartLineFixedAmount: String(rawDiscount.configuration.cartLineFixedAmount),
+      orderFixedAmount: String(rawDiscount.configuration.orderFixedAmount),
+      deliveryFixedAmount: String(rawDiscount.configuration.deliveryFixedAmount),
       metafieldId: rawDiscount.configuration.metafieldId,
       collectionIds: rawDiscount.configuration.collectionIds || [],
     },
@@ -177,7 +183,7 @@ export default function VolumeEdit() {
   return (
     <Page>
       <ui-title-bar title={`Edit ${rawDiscount.title}`}>
-        <button variant="breadcrumb" onClick={() => navigate("/app")}>
+        <button variant="breadcrumb" onClick={() => navigate("/app/discounts")}>
           Discounts
         </button>
       </ui-title-bar>

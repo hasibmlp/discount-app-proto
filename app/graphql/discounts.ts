@@ -46,6 +46,15 @@ export const GET_DISCOUNT = `
   }
 `;
 
+export const GET_DISCOUNT_USAGE_COUNT = `
+  query GetDiscountUsageCount($id: ID!) {
+    discountNode(id: $id) {
+      id
+      usageCount
+    }
+  }
+`;
+
 // Mutations
 export const UPDATE_CODE_DISCOUNT = `
   mutation UpdateCodeDiscount($id: ID!, $discount: DiscountCodeAppInput!) {

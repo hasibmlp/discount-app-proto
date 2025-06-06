@@ -19,6 +19,9 @@ interface DiscountConfiguration {
   cartLinePercentage: string;
   orderPercentage: string;
   deliveryPercentage: string;
+  cartLineFixedAmount: string;
+  orderFixedAmount: string;
+  deliveryFixedAmount: string;
   metafieldId?: string;
   collectionIds?: string[];
   collections?: Collection[];
@@ -56,6 +59,9 @@ interface UseDiscountFormProps {
       cartLinePercentage: string;
       orderPercentage: string;
       deliveryPercentage: string;
+      cartLineFixedAmount: string;
+      orderFixedAmount: string;
+      deliveryFixedAmount: string;
       metafieldId?: string;
       collectionIds?: string[];
     };
@@ -88,6 +94,12 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
         initialData?.configuration.orderPercentage?.toString() ?? "0",
       deliveryPercentage:
         initialData?.configuration.deliveryPercentage?.toString() ?? "0",
+      cartLineFixedAmount:
+        initialData?.configuration.cartLineFixedAmount?.toString() ?? "0",
+      orderFixedAmount:
+        initialData?.configuration.orderFixedAmount?.toString() ?? "0",
+      deliveryFixedAmount:
+        initialData?.configuration.deliveryFixedAmount?.toString() ?? "0",
       metafieldId: initialData?.configuration.metafieldId,
       collectionIds: initialData?.configuration.collectionIds ?? [],
     },
@@ -150,6 +162,13 @@ export function useDiscountForm({ initialData }: UseDiscountFormProps = {}) {
           orderPercentage: parseFloat(formState.configuration.orderPercentage),
           deliveryPercentage: parseFloat(
             formState.configuration.deliveryPercentage,
+          ),
+          cartLineFixedAmount: parseFloat(
+            formState.configuration.cartLineFixedAmount,
+          ),
+          orderFixedAmount: parseFloat(formState.configuration.orderFixedAmount),
+          deliveryFixedAmount: parseFloat(
+            formState.configuration.deliveryFixedAmount,
           ),
           collectionIds: formState.configuration.collectionIds,
         },
